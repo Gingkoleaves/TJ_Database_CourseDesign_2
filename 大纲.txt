@@ -1,0 +1,51 @@
+需求分析、数据库概念设计、逻辑设计【E-R图】、物理设计【具体字段设计、索引设计】
+数据视图：物理层(实际存储数据)-逻辑层(描述数据类型和关系)-视图层(选择适当信息展示)
+E-R图描述数据库：超码、候选码、主码、外键、约束；转化为关系型数据库
+列出支持的事务列表ACID【CURD】、并发检测
+设计若干个视图
+Role授权
+强弱实体集
+基于函数依赖的关系分解、无关属性、正则覆盖
+保持依赖的分解检测、无损连接分解检测
+第一第二第三范式，BC范式
+索引、B+树索引
+
+字段：
+消耗性资产名称、分类编号、分类名称、厂家商家品牌、规格型号、有效期至；
+入库编号、入库来源、入库数量、入库位置【房间-箱柜-隔板】、入库备注；
+出库编号、出库去向、出库要求【领用要求】、出库数量、出库位置、出库备注；
+库存数量、计数单位、库存备注
+用户ID、用户密码、用户权限【分类编号的集合】
+
+数据库设计：
+dim_asset_definition (资产定义表): asset_id (PK), name, category_id (FK), brand, model, unit, requirement (领用要求), is_active(资产有效)
+dim_category (分类表): category_id (PK), category_name
+dim_location (位置表): location_id (PK), room, cabinet, shelf
+fact_stock_batch (批信息): batch_id (PK), batch_serial, asset_id (FK), location_id (FK), expiry_date, current_quantity (剩余数量), remarks (备注)		
+fact_inbound_log (入库明细): inbound_id (PK), batch_id (FK), source (来源), source_desc, quantity, inbound_time, operator_id (FK), remarks (备注)
+fact_outbound_log (出库明细): outbound_id (PK), batch_id (FK), destination (去向), quantity, outbound_time, operator_id (FK), remarks (备注)
+sys_user (用户元数据): user_id (PK), username, password_hash, is_admin
+sys_role (职属元数据): role_id (PK), description
+role_permission (职属权限): role_id (FK), category_id (FK) (复合主键)
+user_roles (用户职属): user_id (PK), role_id (PK) (复合主键)
+约束条件：
+fact_stock_batch.current_quantity >= 0 (Check Constraint)
+fact_inbound_log.quantity > 0 且 fact_outbound_log.quantity > 0
+inbound_time 和 outbound_time 默认值为 CURRENT_TIMESTAMP
+若干外键约束、唯一性约束、非空约束
+视图设计:
+v_asset_inventory_summary (资产库存总览)：屏蔽“批次”概念，直接展示每种资产在全库的总数
+v_expiring_assets_alert (有效期预警视图)：列出所有即将到期（如 30 天内）或已过期的库存
+v_user_accessible_categories (用户授权分类视图)：快速查询特定用户拥有管理权限的分类详情
+v_location_stock_detail (库位明细视图)：展示【房间-箱柜-隔板】层级下的资产分布
+事务设计：
+T1: 入库事务 (Inbound Transaction)
+T2: 出库事务 (Outbound Transaction)
+T3: 库位转移事务 (Stock Transfer)
+T4: 权限变更事务 (Permission Adjustment)
+索引设计：
+唯一索引 dim_asset_definition(category_id, name, brand, model)
+唯一索引 dim_location(room, cabinet, shelf)
+sys_user_permission(user_id, category_id)
+fact_stock_batch(current_quantity)
+用户role设计：
